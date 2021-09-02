@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace LLModMenu
+namespace ModMenu
 {
     public static class ModMenuStyle
     {
@@ -10,6 +10,7 @@ namespace LLModMenu
 
         public static void InitStyle()
         {
+            texColors.Clear();
             texColors.Add("Yellow", ColorToTexture2D(new Color(1f, 0.968f, 0.3f)));
             texColors.Add("LightYellow", ColorToTexture2D(new Color(1f, 1f, 0.5f)));
             texColors.Add("DarkGray", ColorToTexture2D(new Color(0.145f, 0.145f, 0.145f)));
