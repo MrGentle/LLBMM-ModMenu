@@ -21,7 +21,7 @@ namespace ModMenu
     /// See also description of BepInEx metadata:
     /// https://bepinex.github.io/bepinex_docs/master/articles/dev_guide/plugin_tutorial/2_plugin_start.html#basic-information-about-the-plug-in
     /// </remarks>
-    internal static class PluginInfos
+    public static class PluginInfos
     {
         /// <summary>
         /// Human-readable name of the plugin. In general, it should be short and concise.
@@ -42,6 +42,6 @@ namespace ModMenu
         /// Version of the plugin. Must be in form <major>.<minor>.<build>.<revision>.
         /// Major and minor versions are mandatory, but build and revision can be left unspecified.
         /// </summary>
-        public const string PLUGIN_VERSION = "1.0.1";
+        public const string PLUGIN_VERSION = "1.1.0";
     }
 }

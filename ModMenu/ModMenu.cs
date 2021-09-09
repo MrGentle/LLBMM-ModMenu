@@ -16,7 +16,7 @@ namespace ModMenu
     public class ModMenu : BaseUnityPlugin
     {
         public static ModMenu Instance { get; private set; } = null;
-        public static List<BepInEx.PluginInfo> registeredMods = new List<BepInEx.PluginInfo>();
+        public static Dictionary<BepInEx.PluginInfo, List<string>> registeredMods = new Dictionary<BepInEx.PluginInfo, List<string>>();
         public void Awake()
         {
             Instance = this;
@@ -47,9 +47,9 @@ namespace ModMenu
         private bool inModSubOptions = false;
 
 
-        public static void RegisterMod(BepInEx.PluginInfo pluginInfo)
+        public static void RegisterMod(BepInEx.PluginInfo pluginInfo, List<string> modmenu_textinfo = null)
         {
-            registeredMods.Add(pluginInfo);
+            registeredMods.Add(pluginInfo, modmenu_textinfo);
         }
 
         private void Update()
@@ -119,7 +119,7 @@ namespace ModMenu
 
             var vcount = 0;
             var hcount = 0;
-            foreach (BepInEx.PluginInfo plugin in registeredMods)
+            foreach (BepInEx.PluginInfo plugin in registeredMods.Keys)
             {
                 var obj = Instantiate(modSettingsButton, screen.transform);
                 obj.SetText(plugin.Metadata.Name, 50);
@@ -242,8 +242,15 @@ namespace ModMenu
                 GUI.Box(new Rect(10, 10, calc.x + 20, calc.y), "ModMenu " + this.Info.Metadata.Version, ModMenuStyle.versionBox);
 
                 GUI.Window(0, new Rect(x1, y1, x2, y2 / 3), keybindWindowFunction, "Keybindings", ModMenuStyle.windStyle);
-                GUI.Window(1, new Rect(x1, y1 + y2 / 3 + 10, x2, y2 / 3), optionsWindowFunction, "Options", ModMenuStyle.windStyle);
-                GUI.Window(2, new Rect(x1, y1 + ((y2 / 3 + 10) * 2), x2, y2 / 5), textWindowFunction, "Mod Information", ModMenuStyle.windStyle);
+                if (registeredMods[currentOpenMod] != null)
+                {
+                    GUI.Window(1, new Rect(x1, y1 + y2 / 3 + 10, x2, y2 / 3), optionsWindowFunction, "Options", ModMenuStyle.windStyle);
+                    GUI.Window(2, new Rect(x1, y1 + ((y2 / 3 + 10) * 2), x2, y2 / 5), textWindowFunction, "Mod Information", ModMenuStyle.windStyle);
+                }
+                else
+                {
+                    GUI.Window(1, new Rect(x1, y1 + y2 / 3 + 10, x2, 2 * y2 / 3 ), optionsWindowFunction, "Options", ModMenuStyle.windStyle);
+                }
 
                 GUI.skin.window = null;
             }
@@ -453,18 +460,32 @@ namespace ModMenu
             optionsTextpos = GUILayout.BeginScrollView(optionsTextpos, false, true);
 
             ConfigFile modConfig = currentOpenMod.Instance.Config;
-
-            foreach (ConfigDefinition setting in modConfig.Keys.Where((setting) => modConfig[setting].SettingType == typeof(string)))
+            if (registeredMods.ContainsKey(currentOpenMod.Instance.Info) && registeredMods[currentOpenMod.Instance.Info] != null)
             {
-                string settingValue = (string)modConfig[setting].BoxedValue;
-                string settingDesc = modConfig[setting].Description.Description;
-                if (settingDesc.ToLower() == "modmenu_text")
+                foreach (string textLine in registeredMods[currentOpenMod.Instance.Info])
                 {
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(settingValue, ModMenuStyle.readStyle);
+                    GUILayout.Label(textLine, ModMenuStyle.readStyle);
                     GUILayout.EndHorizontal();
                 }
             }
+            /*
+            else
+            {
+                // DEPRECATED WILL BE REMOVED SOON
+                foreach (ConfigDefinition setting in modConfig.Keys.Where((setting) => modConfig[setting].SettingType == typeof(string)))
+                {
+                    string settingValue = (string)modConfig[setting].BoxedValue;
+                    string settingDesc = modConfig[setting].Description.Description;
+                    if (settingDesc.ToLower() == "modmenu_text")
+                    {
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label(settingValue, ModMenuStyle.readStyle);
+                        GUILayout.EndHorizontal();
+                    }
+                }
+            }
+            */
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
