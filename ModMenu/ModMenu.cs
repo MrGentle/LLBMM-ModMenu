@@ -312,7 +312,7 @@ namespace ModMenu
                 else if (settingType == typeof(int))
                 {
                     if (modConfig[setting].Description?.AcceptableValues is AcceptableValueRange<int>
-                    // NIY || modConfig[setting].Description.AcceptableValues is AcceptableValueRange<float>
+                    // NYI || modConfig[setting].Description.AcceptableValues is AcceptableValueRange<float>
                     )
                     {
                         MakeSliderSettingGUI(modConfig, setting);
@@ -326,8 +326,14 @@ namespace ModMenu
                 {
                     string settingValue = (string)modConfig[setting].BoxedValue;
                     string settingDesc = modConfig[setting].Description.Description;
+                    object[] settingTags = modConfig[setting].Description.Tags;
 
-                    if (settingDesc.ToLower() == "modmenu_header")
+                    if (settingTags.Contains("modmenu_filepicker") || settingDesc.ToLower() == "modmenu_filepicker")
+                    {
+                        // TODO NYI MakeFilePickerSettingGUI(modConfig, setting);
+                        MakeStringSettingGUI(modConfig, setting);
+                    }
+                    else if (settingTags.Contains("modmenu_header") || settingDesc.ToLower() == "modmenu_header")
                     {
                         GUILayout.BeginHorizontal();
                         GUILayout.FlexibleSpace();
@@ -335,7 +341,7 @@ namespace ModMenu
                         GUILayout.FlexibleSpace();
                         GUILayout.EndHorizontal();
                     }
-                    else if (settingDesc.ToLower() == "modmenu_gap")
+                    else if (settingTags.Contains("modmenu_gap") || settingDesc.ToLower() == "modmenu_gap")
                     {
                         if (Int32.TryParse(settingValue, out int n))
                         {
@@ -345,6 +351,10 @@ namespace ModMenu
                         {
                             GUILayout.Space(20);
                         }
+                    }
+                    else
+                    {
+                        MakeStringSettingGUI(modConfig, setting);
                     }
                 }
             }
@@ -453,6 +463,42 @@ namespace ModMenu
             GUILayout.EndHorizontal();
         }
 
+        private void MakeStringSettingGUI(ConfigFile modConfig, ConfigDefinition setting)
+        {
+            string value = (string)modConfig[setting].BoxedValue;
+
+            string formatted = UppercaseFirst(Regex.Replace(setting.Key, "([a-z])([A-Z])", "$1 $2"));
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(formatted + ": ", ModMenuStyle.labStyle);
+            GUILayout.Space(30);
+
+            string textFieldString = GUILayout.TextField(value, 256, ModMenuStyle._textFieldStyle, GUILayout.MinWidth(120));
+
+
+            GUIStyle test = ModMenuStyle.button;
+            if ((string)modConfig[setting].BoxedValue != textFieldString)
+            {
+                test.fontStyle = FontStyle.Bold;
+                modConfig.SaveOnConfigSet = false;
+                modConfig[setting].BoxedValue = textFieldString;
+            }
+            bool isFromTextPressed = GUILayout.Button("Set Value", test);
+
+            if (isFromTextPressed)
+            {
+                modConfig.Save();
+                modConfig.SaveOnConfigSet = true;
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
+        private void MakeFilePickerSettingGUI(ConfigFile modConfig, ConfigDefinition setting)
+        {
+            // TODO NYI
+        }
+
         private void OpenTextWindow(int wId)
         {
             GUILayout.Space(30);
@@ -469,23 +515,6 @@ namespace ModMenu
                     GUILayout.EndHorizontal();
                 }
             }
-            /*
-            else
-            {
-                // DEPRECATED WILL BE REMOVED SOON
-                foreach (ConfigDefinition setting in modConfig.Keys.Where((setting) => modConfig[setting].SettingType == typeof(string)))
-                {
-                    string settingValue = (string)modConfig[setting].BoxedValue;
-                    string settingDesc = modConfig[setting].Description.Description;
-                    if (settingDesc.ToLower() == "modmenu_text")
-                    {
-                        GUILayout.BeginHorizontal();
-                        GUILayout.Label(settingValue, ModMenuStyle.readStyle);
-                        GUILayout.EndHorizontal();
-                    }
-                }
-            }
-            */
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
