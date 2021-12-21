@@ -249,7 +249,7 @@ namespace ModMenu
                 }
                 else
                 {
-                    GUI.Window(1, new Rect(x1, y1 + y2 / 3 + 10, x2, 2 * y2 / 3 ), optionsWindowFunction, "Options", ModMenuStyle.windStyle);
+                    GUI.Window(1, new Rect(x1, y1 + y2 / 3 + 10, x2, 2 * y2 / 3), optionsWindowFunction, "Options", ModMenuStyle.windStyle);
                 }
 
                 GUI.skin.window = null;
@@ -312,7 +312,7 @@ namespace ModMenu
                 else if (settingType == typeof(int))
                 {
                     if (modConfig[setting].Description?.AcceptableValues is AcceptableValueRange<int>
-                    // NYI || modConfig[setting].Description.AcceptableValues is AcceptableValueRange<float>
+                    // TODO NYI || modConfig[setting].Description.AcceptableValues is AcceptableValueRange<float>
                     )
                     {
                         MakeSliderSettingGUI(modConfig, setting);
@@ -330,8 +330,7 @@ namespace ModMenu
 
                     if (settingTags.Contains("modmenu_filepicker") || settingDesc.ToLower() == "modmenu_filepicker")
                     {
-                        // TODO NYI MakeFilePickerSettingGUI(modConfig, setting);
-                        MakeStringSettingGUI(modConfig, setting);
+                        MakeFilePickerSettingGUI(modConfig, setting);
                     }
                     else if (settingTags.Contains("modmenu_header") || settingDesc.ToLower() == "modmenu_header")
                     {
@@ -497,6 +496,8 @@ namespace ModMenu
         private void MakeFilePickerSettingGUI(ConfigFile modConfig, ConfigDefinition setting)
         {
             // TODO NYI
+            MakeStringSettingGUI(modConfig, setting);
+
         }
 
         private void OpenTextWindow(int wId)
