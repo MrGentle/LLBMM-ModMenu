@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -12,6 +14,7 @@ using BepInEx.Configuration;
 namespace ModMenu
 {
     [BepInPlugin(PluginInfos.PLUGIN_ID, PluginInfos.PLUGIN_NAME, PluginInfos.PLUGIN_VERSION)]
+    [BepInDependency(SFB.PluginInfos.PLUGIN_ID, BepInDependency.DependencyFlags.HardDependency)]
     [BepInProcess("LLBlaze.exe")]
     public class ModMenu : BaseUnityPlugin
     {
@@ -41,7 +44,6 @@ namespace ModMenu
         private bool sliderChange = false;
         private ConfigDefinition definitionToRebind = null;
         private bool rebindingKey = false;
-        private int switchInputModeTimer = 0;
         private bool inModOptions = false;
         public static bool InModOptions => Instance.inModOptions;
         private bool inModSubOptions = false;
@@ -88,9 +90,6 @@ namespace ModMenu
                     modSettingsButton = this.InitModSettingsButton();
                 }
             }
-
-
-            if (switchInputModeTimer != 30) switchInputModeTimer++;
 
             if (inModSubOptions && this.currentOpenMod != this.previousOpenMod) //If we are within the options of a spiesific mod.
             {
@@ -304,8 +303,27 @@ namespace ModMenu
 
             foreach (ConfigDefinition setting in modConfig.Keys)
             {
+                object[] settingTags = modConfig[setting].Description.Tags;
                 Type settingType = modConfig[setting].SettingType;
-                if (settingType == typeof(bool))
+
+                if (modConfig[setting].Description.Tags.Contains("modmenu_hidden"))
+                {
+                    continue;
+                }
+                else if (settingTags.Contains("modmenu_filepicker") ||
+                    settingTags.Contains("modmenu_directorypicker"))
+                {
+                    MakeFilePickerSettingGUI(modConfig, setting);
+                }
+                else if (settingTags.Contains("modmenu_header"))
+                {
+                    MakeHeaderGUI(modConfig, setting);
+                }
+                else if (settingTags.Contains("modmenu_gap"))
+                {
+                    MakeGapGUI(modConfig, setting);
+                }
+                else if (settingType == typeof(bool))
                 {
                     MakeBoolSettingGUI(modConfig, setting);
                 }
@@ -324,43 +342,39 @@ namespace ModMenu
                 }
                 else if (settingType == typeof(string))
                 {
-                    string settingValue = (string)modConfig[setting].BoxedValue;
-                    string settingDesc = modConfig[setting].Description.Description;
-                    object[] settingTags = modConfig[setting].Description.Tags;
-
-                    if (settingTags.Contains("modmenu_filepicker") || settingDesc.ToLower() == "modmenu_filepicker")
-                    {
-                        MakeFilePickerSettingGUI(modConfig, setting);
-                    }
-                    else if (settingTags.Contains("modmenu_header") || settingDesc.ToLower() == "modmenu_header")
-                    {
-                        GUILayout.BeginHorizontal();
-                        GUILayout.FlexibleSpace();
-                        GUILayout.Box(settingValue, ModMenuStyle.headerBox);
-                        GUILayout.FlexibleSpace();
-                        GUILayout.EndHorizontal();
-                    }
-                    else if (settingTags.Contains("modmenu_gap") || settingDesc.ToLower() == "modmenu_gap")
-                    {
-                        if (Int32.TryParse(settingValue, out int n))
-                        {
-                            GUILayout.Space(n);
-                        }
-                        else
-                        {
-                            GUILayout.Space(20);
-                        }
-                    }
-                    else
-                    {
-                        MakeStringSettingGUI(modConfig, setting);
-                    }
+                    MakeStringSettingGUI(modConfig, setting);
                 }
             }
 
             GUILayout.EndScrollView();
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
+        }
+
+        private void MakeHeaderGUI(ConfigFile modConfig, ConfigDefinition setting)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Box((string)modConfig[setting].BoxedValue, ModMenuStyle.headerBox);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+        }
+
+        private void MakeGapGUI(ConfigFile modConfig, ConfigDefinition setting)
+        {
+            Type settingType = modConfig[setting].SettingType;
+            if (settingType == typeof(int))
+            {
+                GUILayout.Space((int)modConfig[setting].BoxedValue);
+            }
+            else if (Int32.TryParse((string)modConfig[setting].BoxedValue, out int n))
+            {
+                GUILayout.Space(n);
+            }
+            else
+            {
+                GUILayout.Space(20);
+            }
         }
 
         private void MakeBoolSettingGUI(ConfigFile modConfig, ConfigDefinition setting)
@@ -495,9 +509,71 @@ namespace ModMenu
 
         private void MakeFilePickerSettingGUI(ConfigFile modConfig, ConfigDefinition setting)
         {
-            // TODO NYI
-            MakeStringSettingGUI(modConfig, setting);
+            string value = (string)modConfig[setting].BoxedValue;
+            string formatted = UppercaseFirst(Regex.Replace(setting.Key, "([a-z])([A-Z])", "$1 $2"));
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(formatted + ": ", ModMenuStyle.labStyle);
+            GUILayout.Space(30);
+            string textFieldString = GUILayout.TextField(value, 256, ModMenuStyle._textFieldStyle, GUILayout.MinWidth(120));
 
+            GUIStyle llbButtonStyle = ModMenuStyle.button;
+            if ((string)modConfig[setting].BoxedValue != textFieldString)
+            {
+                llbButtonStyle.fontStyle = FontStyle.Bold;
+                modConfig.SaveOnConfigSet = false;
+                modConfig[setting].BoxedValue = textFieldString;
+            }
+            
+            bool isFromTextPressed = GUILayout.Button("Set Value", llbButtonStyle);
+            bool isBrowseFilesPressed = GUILayout.Button("Browse Files", ModMenuStyle.button);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+
+            if (isFromTextPressed)
+            {
+                modConfig.Save();
+                modConfig.SaveOnConfigSet = true;
+                return;
+            }
+            if (isBrowseFilesPressed)
+            {
+                object[] settingTags = modConfig[setting].Description.Tags;
+                if (settingTags.Contains("modmenu_directorypicker"))
+                {
+                    SFB.StandaloneFileBrowser.OpenFolderPanelAsync(
+                        "Select Folder for: " + modConfig[setting].Definition.Key, 
+                        value, 
+                        false, 
+                        FileSelectionCallback(modConfig[setting])
+                    );
+                } else if (settingTags.Contains("modmenu_filepicker"))
+                {
+                    SFB.StandaloneFileBrowser.OpenFilePanelAsync(
+                        "Select File for: " + modConfig[setting].Definition.Key,
+                        value,
+                        "*",
+                        false,
+                        FileSelectionCallback(modConfig[setting])
+                    );
+                }
+            }
+        }
+
+        private Action<string[]> FileSelectionCallback(ConfigEntryBase setting)
+        {
+            return (string[] results) =>
+            {
+                if (results.Length > 0 && results[0].Length > 0)
+                {
+                    Logger.LogDebug("Got directory: '" + results[0] + "'.");
+                    setting.BoxedValue = results[0];
+                }
+                else
+                {
+                    Logger.LogInfo("File selection was cancelled.");
+                }
+            };
         }
 
         private void OpenTextWindow(int wId)
