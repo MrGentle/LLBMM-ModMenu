@@ -45,7 +45,7 @@ namespace ModMenu
         private ConfigDefinition definitionToRebind = null;
         private bool rebindingKey = false;
         private bool inModOptions = false;
-        public static bool InModOptions => Instance.inModOptions;
+        public static bool InModOptions() => Instance.inModOptions;
         private bool inModSubOptions = false;
 
 
